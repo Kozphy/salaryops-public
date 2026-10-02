@@ -1,7 +1,7 @@
 """salaryops command-line interface.
 
 Exit codes: 0 analysis completed (any decision state); 2 input could not be analyzed or a
-review transition was invalid; 1 audit verification failed.
+review transition was invalid; 1 audit verification failed or the audit log is unreadable.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from rich.console import Console
 from . import audit
 from .compare import compare, parse_fx
 from .decision import Analysis, analyze, apply_human_decision
-from .models import OfferInput, SalaryOpsError, load_offer, load_settings
+from .models import FailureClass, OfferInput, SalaryOpsError, load_offer, load_settings
 from .policies import DecisionState
 from .report import (
     render_analysis,
@@ -53,7 +53,7 @@ def _fail(exc: SalaryOpsError, as_json: bool) -> typer.Exit:
         _emit_json({"failure": exc.to_dict()})
     else:
         err_console.print(f"[bold red]{exc.failure.failure_class.value}[/bold red]: {exc.failure.message}")
-    return typer.Exit(code=2)
+    return typer.Exit(code=1 if exc.failure.failure_class is FailureClass.AUDIT_CORRUPT else 2)
 
 
 def _emit_json(payload: dict[str, Any]) -> None:
@@ -88,15 +88,15 @@ def analyze_cmd(
     no_audit: Annotated[bool, typer.Option("--no-audit", help="Do not write audit events.")] = False,
 ) -> None:
     """Full analysis: compensation, band, leverage, missing info, policies, decision."""
-    try:
-        r = run(path, as_of, policy_config)
-    except SalaryOpsError as exc:
-        raise _fail(exc, as_json) from exc
     analysis_id = None
     human = None
-    if not no_audit:
-        analysis_id = audit.write_analysis(audit.AuditLog(audit_log), r.analysis, r.session_id, r.as_of_source)
-        human = audit.latest_state(audit_log, r.session_id, audit.offer_sha256(r.analysis))
+    try:
+        r = run(path, as_of, policy_config)
+        if not no_audit:
+            analysis_id = audit.write_analysis(audit.AuditLog(audit_log), r.analysis, r.session_id, r.as_of_source)
+            human = audit.latest_state(audit_log, r.session_id, audit.offer_sha256(r.analysis))
+    except SalaryOpsError as exc:
+        raise _fail(exc, as_json) from exc
     if as_json:
         payload = r.analysis.to_dict() | {"session_id": r.session_id, "analysis_id": analysis_id}
         payload["human_decision"] = None if human is None else human.value
@@ -176,11 +176,11 @@ def review_cmd(
         sha = audit.offer_sha256(r.analysis)
         current = audit.latest_state(audit_log, r.session_id, sha) or r.analysis.decision.state
         new_state = apply_human_decision(current, decision)
+        record = audit.write_human_decision(
+            audit.AuditLog(audit_log), r.session_id, sha, current, new_state, reviewer, comment
+        )
     except SalaryOpsError as exc:
         raise _fail(exc, as_json) from exc
-    record = audit.write_human_decision(
-        audit.AuditLog(audit_log), r.session_id, sha, current, new_state, reviewer, comment
-    )
     if as_json:
         _emit_json({"from_state": current.value, "decision_state": new_state.value, "sequence": record["sequence"]})
         return

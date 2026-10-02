@@ -102,6 +102,16 @@ def test_review_flow(log):
     assert shown["human_decision"] == "COUNTER"
 
 
+def test_corrupt_audit_log_fails_cleanly(log):
+    Path(log).write_text("not json\n", encoding="utf-8")
+    r = invoke("analyze", EXAMPLES / "offer_counter.yaml", "--json", "--audit-log", log)
+    assert r.exit_code == 1
+    assert json.loads(r.output)["failure"]["failure_class"] == "AUDIT_CORRUPT"
+    review = invoke("review", EXAMPLES / "offer_counter.yaml", "--decision", "WALK_AWAY", "--reviewer", "me",
+                    "--audit-log", log)
+    assert review.exit_code == 1 and "AUDIT_CORRUPT" in review.output
+
+
 def test_audit_verify_detects_tampering(log):
     invoke("analyze", EXAMPLES / "offer_basic.yaml", "--audit-log", log)
     text = Path(log).read_text(encoding="utf-8").replace("1500000", "1600000", 1)

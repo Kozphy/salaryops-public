@@ -6,7 +6,7 @@ import pytest
 from conftest import AS_OF, make_input
 from salaryops import audit
 from salaryops.decision import analyze
-from salaryops.models import PolicySettings, parse_offer
+from salaryops.models import FailureClass, PolicySettings, SalaryOpsError, parse_offer
 from salaryops.policies import DecisionState
 
 
@@ -81,6 +81,25 @@ def test_verify_detects_deleted_record(log_path):
 
 def test_verify_missing_file(tmp_path):
     assert not audit.verify(tmp_path / "none.jsonl").ok
+
+
+@pytest.mark.parametrize(
+    ("content", "error"),
+    [("not json\n", "not valid JSON"), ("[1, 2]\n", "not a JSON object")],
+)
+def test_verify_reports_unparseable_lines(log_path, content, error):
+    log_path.write_text(content, encoding="utf-8")
+    result = audit.verify(log_path)
+    assert not result.ok and result.line == 1 and error in result.error
+
+
+@pytest.mark.parametrize("content", ["not json\n", "[1, 2]\n", '{"event_type": "X"}\n'])
+def test_corrupt_log_raises_typed_failure_instead_of_appending(log_path, content):
+    log_path.write_text(content, encoding="utf-8")
+    with pytest.raises(SalaryOpsError) as exc:
+        write(log_path)
+    assert exc.value.failure.failure_class is FailureClass.AUDIT_CORRUPT
+    assert log_path.read_text(encoding="utf-8") == content
 
 
 def test_latest_human_decision_is_scoped_to_input(log_path):

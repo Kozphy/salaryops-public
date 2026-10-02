@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .decision import Analysis
+from .models import Failure, FailureClass, SalaryOpsError
 from .policies import DecisionState
 
 SCHEMA_VERSION = 1
@@ -54,11 +55,29 @@ def now_utc() -> str:
     return datetime.now(UTC).isoformat(timespec="milliseconds")
 
 
+def _corrupt(path: Path, where: str, why: str) -> SalaryOpsError:
+    return SalaryOpsError(Failure(
+        FailureClass.AUDIT_CORRUPT,
+        f"{path} {where}: {why}; run `salaryops audit verify` and repair or move the file",
+    ))
+
+
 def read_records(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
+    records: list[dict[str, Any]] = []
     with path.open(encoding="utf-8") as fh:
-        return [json.loads(line) for line in fh if line.strip()]
+        for line_no, line in enumerate(fh, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                raise _corrupt(path, f"line {line_no}", "not valid JSON") from None
+            if not isinstance(record, dict):
+                raise _corrupt(path, f"line {line_no}", "not a JSON object")
+            records.append(record)
+    return records
 
 
 class AuditLog:
@@ -69,8 +88,10 @@ class AuditLog:
         records = read_records(self.path)
         if not records:
             return 0, GENESIS
-        last = records[-1]
-        return int(last["sequence"]), str(last["hash"])
+        sequence, last_hash = records[-1].get("sequence"), records[-1].get("hash")
+        if not isinstance(sequence, int) or not isinstance(last_hash, str):
+            raise _corrupt(self.path, "last record", "missing sequence or hash")
+        return sequence, last_hash
 
     def append_many(self, events: list[dict[str, Any]], session_id: str, analysis_id: str) -> list[dict[str, Any]]:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -222,6 +243,8 @@ def verify(path: Path) -> VerifyResult:
                 record = json.loads(line)
             except json.JSONDecodeError:
                 return VerifyResult(False, count, "line is not valid JSON", line_no)
+            if not isinstance(record, dict):
+                return VerifyResult(False, count, "line is not a JSON object", line_no)
             count += 1
             if record.get("schema_version") != SCHEMA_VERSION:
                 return VerifyResult(False, count, f"unsupported schema_version {record.get('schema_version')}", line_no)
