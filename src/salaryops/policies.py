@@ -14,6 +14,7 @@ from typing import Any
 
 from .batna import LeverageResult
 from .compensation import CompResult
+from .countries import country_code, same_place
 from .missing_info import MissingItem
 from .models import Confidence, OfferInput, PolicySettings
 from .salary_band import BandCategory, BandResult
@@ -109,10 +110,6 @@ def _s(v: Decimal | None) -> str | None:
     return None if v is None else str(v)
 
 
-def _same(a: str, b: str) -> bool:
-    return a.strip().casefold() == b.strip().casefold()
-
-
 # --- shared fact: minimum status -------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -187,12 +184,15 @@ def p003_location(f: Facts) -> Check:
         "remote_eligible_countries": loc.remote_eligible_countries,
         "candidate_country": c.candidate_country,
     }
+    places = [loc.country, loc.city, c.candidate_country, *(loc.remote_eligible_countries or []), *c.acceptable_locations]
+    if named := [p for p in places if p]:
+        ev["country_codes"] = {p: country_code(p) for p in named}
     if loc.remote is True and loc.remote_eligible_countries is None:
         unknown.append("remote_geography")
     elif loc.remote is True and loc.remote_eligible_countries:
         if c.candidate_country is None:
             unknown.append("candidate_country")
-        elif not any(_same(c.candidate_country, x) for x in loc.remote_eligible_countries):
+        elif not any(same_place(c.candidate_country, x) for x in loc.remote_eligible_countries):
             conflicts.append(
                 f"remote work limited to {', '.join(loc.remote_eligible_countries)}; candidate is in {c.candidate_country}"
             )
@@ -204,11 +204,11 @@ def p003_location(f: Facts) -> Check:
             unknown.append("remote_policy")
     if loc.remote is False and c.acceptable_locations:
         ev["acceptable_locations"] = c.acceptable_locations
-        places = [p for p in (loc.country, loc.city) if p]
-        if not places:
+        onsite = [p for p in (loc.country, loc.city) if p]
+        if not onsite:
             unknown.append("location")
-        elif not any(_same(p, a) for p in places for a in c.acceptable_locations):
-            conflicts.append(f"on-site location {', '.join(places)} is not in acceptable locations")
+        elif not any(same_place(p, a) for p in onsite for a in c.acceptable_locations):
+            conflicts.append(f"on-site location {', '.join(onsite)} is not in acceptable locations")
     if c.needs_sponsorship:
         ev["sponsorship_offered"] = req.sponsorship_offered
         if req.sponsorship_offered is False:

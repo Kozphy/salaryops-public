@@ -77,6 +77,17 @@ def test_p003_country_match_is_case_insensitive():
     assert outcome("POLICY-003", location={"remote": True, "remote_eligible_countries": ["taiwan "]}) is P
 
 
+def test_p003_matches_country_aliases_and_codes():
+    remote_us = {"remote": True, "remote_eligible_countries": ["United States"]}
+    r = result("POLICY-003", location=remote_us, constraints={"candidate_country": "USA"})
+    assert r.outcome is P
+    assert r.evidence["country_codes"]["USA"] == r.evidence["country_codes"]["United States"] == "US"
+    onsite_uk = {"country": "United Kingdom", "city": "London", "remote": False}
+    assert outcome("POLICY-003", location=onsite_uk, constraints={"acceptable_locations": ["UK"]}) is P
+    assert outcome("POLICY-003", location=onsite_uk, constraints={"acceptable_locations": ["london"]}) is P
+    assert outcome("POLICY-003", location=onsite_uk, constraints={"acceptable_locations": ["TW"]}) is T
+
+
 def test_p004_on_call():
     assert outcome("POLICY-004", requirements={"on_call": True}) is T
     assert outcome("POLICY-004", requirements={"on_call": None}) is N
