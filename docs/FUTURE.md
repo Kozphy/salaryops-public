@@ -19,12 +19,10 @@ reason before it is built.
   recruiter band exists.
 - **Exchange-rate source.** `compare` only accepts user-supplied `--fx` rates. A dated,
   cited rate file could be added, but rates must stay explicit in the audit trail.
-- **Country normalization.** Countries are matched by case-insensitive name, so
-  "USA" and "United States" do not match. ISO 3166 codes would fix this.
-- **Equity detail.** Cliffs, refreshers, and private-company valuation discounts. Today
-  equity is annualized linearly over `vesting_years`.
 - **Audit tail anchoring.** The hash chain detects edits and deletions inside the file but
   not truncation of the last records. Periodically recording the latest hash elsewhere
   would close that gap.
-- **`audit show` command** to pretty-print one session's events.
-- **Streamlit view** over the same `analyze()` function (Week 3, optional).
+- **Back-loaded vesting.** Equity is annualized evenly over `vesting_years` (after any
+  cliff). Schedules such as 5/15/40/40 would need a per-year vesting list.
+- **Human review from the web view.** The Streamlit page records analyses but not
+  `review` decisions; those stay in the CLI, where the reviewer is named explicitly.
