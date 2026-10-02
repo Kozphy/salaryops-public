@@ -1,0 +1,39 @@
+src/salaryops/missing_info.py
+  s_97d87858774eb5::t_6ee26eefc0da95 57-60
+tests/test_compensation.py
+  s_97d87858774eb5::t_3ef15f9c1985a5 56-105
+tests/test_missing_info.py
+  s_97d87858774eb5::t_80270689bd13bc 36-44
+src/salaryops/audit.py
+  s_97d87858774eb5::t_885ef62f2fd32f 142-146
+src/salaryops/compensation.py
+  s_97d87858774eb5::t_337def032e8a20 13,16-17,27-30,48-56,68-71,83-84,92,99-124,127-128,132-134,141-144,147-148
+examples/offer_startup.yaml
+  s_97d87858774eb5::t_a3d3b6049efae0 1-52
+tests/test_cli.py
+  s_97d87858774eb5::t_626358d888711f 60-66,68-69
+  s_97d87858774eb5::t_3470e2744cc3ee 67
+tests/test_models.py
+  s_97d87858774eb5::t_166703e6cf0cc2 87-100
+src/salaryops/report.py
+  s_97d87858774eb5::t_b21962a3abcb20 83-91
+src/salaryops/models.py
+  s_97d87858774eb5::t_0cd86661499065 96-100,214-215
+  s_97d87858774eb5::t_c48a07ee74adb7 186-189,206-213
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cb8eef3e54a7423bc5077416840616f09a4415d7",
+  "prompts": {},
+  "sessions": {
+    "s_97d87858774eb5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "39b89bbe-7f65-41ad-8ef1-96ea27d28aae",
+        "model": "default"
+      },
+      "human_author": "Zixsa <50504962+Kozphy@users.noreply.github.com>"
+    }
+  }
+}
