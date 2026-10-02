@@ -6,7 +6,10 @@ review transition was invalid; 1 audit verification failed or the audit log is u
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import subprocess
+import sys
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -52,6 +55,7 @@ AsOf = Annotated[str | None, typer.Option("--as-of", help="Analysis date YYYY-MM
 PolicyConfig = Annotated[Path | None, typer.Option("--policy-config", help="YAML file overriding policy thresholds.")]
 JsonOut = Annotated[bool, typer.Option("--json", help="Print machine-readable JSON.")]
 AuditPath = Annotated[Path, typer.Option("--audit-log", help="Audit JSONL file.")]
+UI_SCRIPT = Path(__file__).with_name("ui.py")
 
 
 @dataclass(frozen=True)
@@ -225,6 +229,18 @@ def schema_cmd(
         return
     output.write_text(text, encoding="utf-8")
     console.print(f"wrote {output}")
+
+
+@app.command("ui")
+def ui_cmd(port: Annotated[int | None, typer.Option("--port", help="Port for the local web view.")] = None) -> None:
+    """Open the Streamlit web view (needs the ui extra)."""
+    if importlib.util.find_spec("streamlit") is None:
+        err_console.print("the web view needs Streamlit: pip install 'salaryops[ui]'", markup=False)
+        raise typer.Exit(code=2)
+    command = [sys.executable, "-m", "streamlit", "run", str(UI_SCRIPT)]
+    if port is not None:
+        command += ["--server.port", str(port)]
+    raise typer.Exit(code=subprocess.call(command))
 
 
 @audit_app.command("verify")

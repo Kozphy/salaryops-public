@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from salaryops import cli
 from salaryops.cli import app
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
@@ -166,6 +167,26 @@ def test_schema_command(tmp_path):
     out = tmp_path / "offer.schema.json"
     assert invoke("schema", "-o", out).exit_code == 0
     assert json.loads(out.read_text(encoding="utf-8"))["$defs"]["Amount"]
+
+
+def test_ui_command_launches_streamlit(monkeypatch):
+    calls = []
+    monkeypatch.setattr(cli.subprocess, "call", lambda cmd: calls.append(cmd) or 0)
+    assert invoke("ui", "--port", "8600").exit_code == 0
+    [cmd] = calls
+    assert cmd[1:4] == ["-m", "streamlit", "run"]
+    assert Path(cmd[4]).name == "ui.py" and Path(cmd[4]).is_file()
+    assert cmd[5:] == ["--server.port", "8600"]
+    calls.clear()
+    assert invoke("ui").exit_code == 0
+    assert calls[0][5:] == []
+
+
+def test_ui_command_without_streamlit(monkeypatch):
+    monkeypatch.setattr(cli.importlib.util, "find_spec", lambda name: None)
+    r = invoke("ui")
+    assert r.exit_code == 2
+    assert "salaryops[ui]" in r.output
 
 
 def test_corrupt_audit_log_fails_cleanly(log):

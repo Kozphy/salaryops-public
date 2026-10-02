@@ -35,7 +35,7 @@ pythonpath = ["src"]
 addopts = "-q"
 
 [tool.coverage.run]
-source = ["salaryops"]
+source = ["src/salaryops"]
 branch = true
 omit = ["*/salaryops/__main__.py"]
 

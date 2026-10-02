@@ -372,15 +372,19 @@ def _format_errors(exc: ValidationError) -> tuple[str, str | None]:
     return "; ".join(parts), (".".join(str(p) for p in first) or None)
 
 
+def _parse_yaml(text: str, source: str) -> Any:
+    try:
+        return yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        raise SalaryOpsError(Failure(FailureClass.INPUT_INVALID, f"{source} is not valid YAML: {exc}")) from exc
+
+
 def _read_yaml(path: Path) -> Any:
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
         raise SalaryOpsError(Failure(FailureClass.INPUT_INVALID, f"cannot read {path}: {exc.strerror}")) from exc
-    try:
-        return yaml.safe_load(text)
-    except yaml.YAMLError as exc:
-        raise SalaryOpsError(Failure(FailureClass.INPUT_INVALID, f"{path} is not valid YAML: {exc}")) from exc
+    return _parse_yaml(text, str(path))
 
 
 def parse_offer(data: Any) -> OfferInput:
@@ -415,10 +419,19 @@ def load_offer(path: Path) -> OfferInput:
     return parse_offer(_read_yaml(path))
 
 
+def parse_offer_yaml(text: str, source: str = "offer") -> OfferInput:
+    return parse_offer(_parse_yaml(text, source))
+
+
 def load_settings(path: Path | None) -> PolicySettings:
-    if path is None:
-        return PolicySettings()
-    data = _read_yaml(path)
+    return PolicySettings() if path is None else parse_settings(_read_yaml(path))
+
+
+def parse_settings_yaml(text: str, source: str = "policy config") -> PolicySettings:
+    return parse_settings(_parse_yaml(text, source))
+
+
+def parse_settings(data: Any) -> PolicySettings:
     if data is None:
         return PolicySettings()
     if not isinstance(data, dict):
