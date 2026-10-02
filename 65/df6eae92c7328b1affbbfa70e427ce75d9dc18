@@ -1,0 +1,29 @@
+src/salaryops/countries.py
+  s_97d87858774eb5::t_167fb96b3f5207 1-58
+src/salaryops/policies.py
+  s_97d87858774eb5::t_f479178d44160d 207-208,210-211
+  s_97d87858774eb5::t_98dc59ccb8efe8 17
+  s_97d87858774eb5::t_7693360e6c1938 187-189,195
+tests/test_policies.py
+  s_97d87858774eb5::t_a1b1d0359c90a2 80-90
+pyproject.toml
+  s_97d87858774eb5::t_6c5f88a80980fe 12
+tests/test_countries.py
+  s_97d87858774eb5::t_abb1fa1dc49159 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "65df6eae92c7328b1affbbfa70e427ce75d9dc18",
+  "prompts": {},
+  "sessions": {
+    "s_97d87858774eb5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "39b89bbe-7f65-41ad-8ef1-96ea27d28aae",
+        "model": "default"
+      },
+      "human_author": "Zixsa <50504962+Kozphy@users.noreply.github.com>"
+    }
+  }
+}
