@@ -80,6 +80,15 @@ def render_compensation(console: Console, comp: CompResult) -> None:
     equity = amount_text(comp.equity, cur)
     equity.append(f"  ({comp.equity_basis})", style="dim")
     row(console, "Equity / yr", equity)
+    if comp.equity_gross.value is not None and comp.equity_gross != comp.equity:
+        row(console, "  paper value", Text(f"{money(comp.equity_gross.value, cur)} / yr before discount", style="dim"))
+    if comp.vesting_cliff_months is not None:
+        note = "no equity vests in year 1" if comp.cliff_blocks_year1 else "unvested equity is forfeited if you leave first"
+        row(console, "Cliff", Text.assemble(f"{comp.vesting_cliff_months} months", (f"  ({note})", "dim")))
+    if comp.equity_refresh.is_known:
+        refresh = amount_text(comp.equity_refresh, cur)
+        refresh.append("  / yr (shown only; discretionary, never added to TC)", style="dim")
+        row(console, "Refreshers", refresh)
     row(console, "Sign-on", amount_text(comp.sign_on, cur))
     row(console, "Recurring TC", floor_text(comp.recurring_floor, comp.unknown_recurring, cur))
     row(console, "Year-1 TC", floor_text(comp.year1_floor, comp.unknown_recurring + comp.unknown_one_time, cur))

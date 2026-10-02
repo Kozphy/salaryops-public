@@ -57,6 +57,16 @@ def test_as_of_flag_overrides_file(log):
     assert invoke("analyze", EXAMPLES / "offer_counter.yaml", "--as-of", "10/11", "--no-audit").exit_code == 2
 
 
+def test_analyze_private_equity_detail():
+    r = invoke("analyze", EXAMPLES / "offer_startup.yaml", "--no-audit")
+    assert r.exit_code == 0, r.output
+    assert "50% valuation discount" in r.output
+    assert "before discount" in r.output and "Cliff" in r.output and "Refreshers" in r.output
+    data = json.loads(invoke("analyze", EXAMPLES / "offer_startup.yaml", "--no-audit", "--json").output)
+    assert data["compensation"]["recurring_tc_floor"] == "1950000.00"
+    assert data["decision_state"] == "READY_TO_NEGOTIATE"
+
+
 def test_missing_command():
     r = invoke("missing", EXAMPLES / "offer_basic.yaml", "--json")
     data = json.loads(r.output)

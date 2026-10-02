@@ -1,0 +1,52 @@
+# Private-company offer: equity is discounted from paper value; refreshers are shown, never counted.
+as_of: 2026-10-02
+
+company: Seed Stage Labs
+role: Data Engineer
+level: Senior
+employment_type: full_time
+
+location:
+  country: Taiwan
+  city: Taipei
+  remote: false
+
+compensation:
+  currency: TWD
+  base: 1700000
+  bonus: 0
+  equity_grant: 2000000
+  vesting_years: 4
+  vesting_cliff_months: 12
+  equity_kind: private
+  equity_discount: 0.5
+  equity_refresh_annual: 200000
+  sign_on: 0
+
+requirements:
+  on_call: false
+  travel_percent: 0
+
+salary_band:
+  low: 1500000
+  midpoint: 1800000
+  high: 2100000
+  source: recruiter
+  confidence: medium
+
+recruiter:
+  type: in_house
+  offer_deadline: 2026-10-20
+
+batna:
+  competing_offers: 0
+  late_stage_interviews: 1
+  currently_employed: true
+
+constraints:
+  candidate_country: Taiwan
+  minimum_base: 1600000
+  minimum_total_comp: 1900000
+  acceptable_locations: [Taipei]
+  on_call_allowed: false
+  max_travel_percent: 10

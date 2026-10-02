@@ -139,7 +139,11 @@ def analysis_events(analysis: Analysis, as_of_source: str) -> list[dict[str, Any
             "event_type": EventType.COMPENSATION_CALCULATED,
             "inputs": offer.compensation.model_dump(mode="json"),
             "result": comp.to_dict(),
-            "evidence": {"formula": "recurring = base + bonus + annualized equity; year1 = recurring + sign_on"},
+            "evidence": {
+                "formula": "recurring = base + bonus + annualized equity after valuation discount; "
+                           "year1 = base + bonus + equity vesting in year 1 (0 if cliff > 12 months) + sign_on; "
+                           "refreshers and benefits are never added",
+            },
         },
         {
             "event_type": EventType.BAND_ANALYZED,

@@ -93,6 +93,11 @@ class Confidence(StrEnum):
     HIGH = "high"
 
 
+class EquityKind(StrEnum):
+    PUBLIC = "public"
+    PRIVATE = "private"
+
+
 class AmountStatus(StrEnum):
     KNOWN_VALUE = "KNOWN_VALUE"
     KNOWN_ZERO = "KNOWN_ZERO"
@@ -178,6 +183,10 @@ class Compensation(_Model):
     annualized_equity: Amount = Field(default_factory=Amount.unknown)
     equity_grant: Amount = Field(default_factory=Amount.unknown)
     vesting_years: Decimal | None = Field(default=None, gt=0)
+    vesting_cliff_months: int | None = Field(default=None, ge=0)
+    equity_kind: EquityKind | None = None
+    equity_discount: Decimal | None = Field(default=None, ge=0, lt=1)
+    equity_refresh_annual: Amount = Field(default_factory=Amount.unknown)
     sign_on: Amount = Field(default_factory=Amount.unknown)
     benefits_value: Amount = Field(default_factory=Amount.unknown)
 
@@ -192,6 +201,16 @@ class Compensation(_Model):
             raise ValueError(
                 "give either annualized_equity or equity_grant + vesting_years, not both"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _cliff_within_vesting(self) -> Compensation:
+        if (
+            self.vesting_cliff_months is not None
+            and self.vesting_years is not None
+            and self.vesting_cliff_months >= self.vesting_years * 12
+        ):
+            raise ValueError("vesting_cliff_months must be shorter than the vesting period")
         return self
 
 

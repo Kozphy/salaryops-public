@@ -84,6 +84,20 @@ def test_both_equity_forms_rejected():
     assert "not both" in err.failure.message
 
 
+@pytest.mark.parametrize(
+    ("compensation", "message"),
+    [
+        ({"vesting_years": 1, "vesting_cliff_months": 12}, "shorter than the vesting period"),
+        ({"equity_discount": 1}, "less than 1"),
+        ({"equity_kind": "maybe"}, "equity_kind"),
+    ],
+)
+def test_equity_detail_validation(compensation, message):
+    err = _failure(merge(BASE_OFFER, {"compensation": compensation}))
+    assert err.failure.failure_class is FailureClass.INPUT_INVALID
+    assert message in err.failure.message
+
+
 def test_failure_is_machine_readable():
     err = _failure(merge(BASE_OFFER, {"salary_band": {"midpoint": 1}}))
     assert err.to_dict() == {

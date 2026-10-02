@@ -33,6 +33,15 @@ def test_grant_without_vesting_asks_for_schedule_not_equity():
     assert fields(offer, critical=True) == ["equity_vesting_schedule"]
 
 
+def test_private_equity_without_discount_asks_for_valuation():
+    offer = make_input(compensation={"annualized_equity": 100000, "equity_kind": "private"})
+    items = missing(offer)
+    assert [m.field for m in items if m.critical] == ["equity_discount"]
+    assert "409A" in items[0].question
+    assert fields(make_input(compensation={"annualized_equity": 100000, "equity_kind": "private",
+                                           "equity_discount": "0.25"})) == []
+
+
 def test_constraint_makes_requirement_critical():
     offer = make_input(requirements={"on_call": None, "travel_percent": None})
     assert fields(offer, critical=True) == ["on_call_requirement", "travel_requirement"]

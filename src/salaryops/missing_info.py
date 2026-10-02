@@ -54,6 +54,10 @@ def detect_missing(offer: OfferInput, comp: CompResult) -> tuple[MissingItem, ..
     if comp.vesting_schedule_missing:
         item("equity_vesting_schedule", "equity vesting schedule", True,
              "What is the vesting schedule for the equity grant (total years and cliff)?")
+    elif comp.valuation_discount_missing:
+        item("equity_discount", "private-equity valuation discount", True,
+             "What share price is the grant valued at (latest preferred price or 409A), and what liquidity is expected? "
+             "Then set compensation.equity_discount (0 accepts the paper value).")
     elif not comp.equity.is_known:
         item("equity", "equity", True,
              "Does the offer include equity? If so, what is the grant and vesting schedule?")
