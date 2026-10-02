@@ -102,6 +102,42 @@ def test_review_flow(log):
     assert shown["human_decision"] == "COUNTER"
 
 
+def test_audit_show(log):
+    assert "no sessions" in invoke("audit", "show", "--audit-log", log).output
+    invoke("analyze", EXAMPLES / "offer_counter.yaml", "--audit-log", log)
+    invoke("review", EXAMPLES / "offer_counter.yaml", "--decision", "WALK_AWAY", "--reviewer", "me",
+           "--comment", "found better", "--audit-log", log)
+
+    listing = invoke("audit", "show", "--audit-log", log)
+    assert listing.exit_code == 0
+    assert "offer_counter" in listing.output and "hash chain intact" in listing.output
+    sessions = json.loads(invoke("audit", "show", "--json", "--audit-log", log).output)["sessions"]
+    assert sessions[0]["last_human_decision"] == "WALK_AWAY"
+
+    timeline = invoke("audit", "show", "offer_counter", "--audit-log", log)
+    assert timeline.exit_code == 0
+    assert "POLICY-009" in timeline.output and "found better" in timeline.output
+    entries = json.loads(invoke("audit", "show", "offer_counter", "--json", "--audit-log", log).output)["timeline"]
+    assert [e["kind"] for e in entries] == ["analysis", "human_decision"]
+
+    analysis_id = entries[0]["analysis_id"]
+    events = invoke("audit", "show", "offer_counter", "--analysis", analysis_id, "--audit-log", log)
+    assert events.exit_code == 0 and "DECISION_MADE" in events.output
+    raw = json.loads(invoke("audit", "show", "offer_counter", "--analysis", analysis_id, "--json",
+                            "--audit-log", log).output)["records"]
+    assert raw[-1]["event_type"] == "DECISION_MADE"
+
+
+def test_audit_show_errors(log):
+    invoke("analyze", EXAMPLES / "offer_counter.yaml", "--audit-log", log)
+    assert invoke("audit", "show", "nope", "--audit-log", log).exit_code == 2
+    assert invoke("audit", "show", "offer_counter", "--analysis", "nope", "--audit-log", log).exit_code == 2
+    assert invoke("audit", "show", "--analysis", "x", "--audit-log", log).exit_code == 2
+    text = Path(log).read_text(encoding="utf-8").replace("1300000", "1200000", 1)
+    Path(log).write_text(text, encoding="utf-8")
+    assert "verification failed" in invoke("audit", "show", "offer_counter", "--audit-log", log).output
+
+
 def test_corrupt_audit_log_fails_cleanly(log):
     Path(log).write_text("not json\n", encoding="utf-8")
     r = invoke("analyze", EXAMPLES / "offer_counter.yaml", "--json", "--audit-log", log)

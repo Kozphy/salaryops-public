@@ -102,6 +102,43 @@ def test_corrupt_log_raises_typed_failure_instead_of_appending(log_path, content
     assert log_path.read_text(encoding="utf-8") == content
 
 
+def test_session_summary_and_timeline(log_path):
+    a = write(log_path, compensation={"base": 1300000})
+    sha = audit.offer_sha256(a)
+    audit.write_human_decision(audit.AuditLog(log_path), "s1", sha, DecisionState.COUNTER, DecisionState.WALK_AWAY,
+                               "me", "too low")
+    other = analyze(make_input(), PolicySettings(), AS_OF)
+    audit.write_analysis(audit.AuditLog(log_path), other, "s2", "cli")
+    records = audit.read_records(log_path)
+
+    summaries = {s.session_id: s for s in audit.summarize_sessions(records)}
+    assert list(summaries) == ["s1", "s2"]
+    assert (summaries["s1"].analyses, summaries["s1"].human_decisions) == (1, 1)
+    assert (summaries["s1"].last_decision, summaries["s1"].last_human_decision) == ("COUNTER", "WALK_AWAY")
+    assert summaries["s2"].last_human_decision is None
+
+    analysis_entry, human_entry = audit.session_timeline(records, "s1")
+    assert analysis_entry.kind is audit.EntryKind.ANALYSIS
+    assert analysis_entry.input_sha256 == human_entry.input_sha256 == sha
+    assert analysis_entry.detail["triggered_policies"] == ["POLICY-009"]
+    assert analysis_entry.detail["as_of"] == AS_OF.isoformat()
+    assert human_entry.to_dict()["kind"] == "human_decision"
+    assert (human_entry.detail["from_state"], human_entry.decision_state) == ("COUNTER", "WALK_AWAY")
+    assert human_entry.detail["comment"] == "too low"
+
+
+def test_event_summary_covers_every_event_type(log_path):
+    a = write(log_path)
+    audit.write_human_decision(audit.AuditLog(log_path), "s1", audit.offer_sha256(a), DecisionState.ACCEPTABLE,
+                               DecisionState.WALK_AWAY, "me", None)
+    records = audit.read_records(log_path)
+    summaries = {r["event_type"]: audit.event_summary(r) for r in records}
+    assert set(summaries) == set(audit.EventType)
+    assert summaries["DECISION_MADE"] == "ACCEPTABLE / CONFIRM_IN_WRITING"
+    assert summaries["HUMAN_DECISION_RECORDED"] == "ACCEPTABLE -> WALK_AWAY by me"
+    assert "unrecognized" in audit.event_summary({"event_type": "SOMETHING_ELSE"})
+
+
 def test_latest_human_decision_is_scoped_to_input(log_path):
     a = write(log_path)
     sha = audit.offer_sha256(a)

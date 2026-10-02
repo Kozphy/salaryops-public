@@ -222,6 +222,153 @@ def write_human_decision(
     return log.append_many([event], session_id, uuid.uuid4().hex[:12])[0]
 
 
+class EntryKind(StrEnum):
+    ANALYSIS = "analysis"
+    HUMAN_DECISION = "human_decision"
+
+
+@dataclass(frozen=True)
+class SessionSummary:
+    session_id: str
+    analyses: int
+    human_decisions: int
+    last_timestamp: str
+    last_decision: str | None
+    last_human_decision: str | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "analyses": self.analyses,
+            "human_decisions": self.human_decisions,
+            "last_timestamp": self.last_timestamp,
+            "last_decision": self.last_decision,
+            "last_human_decision": self.last_human_decision,
+        }
+
+
+@dataclass(frozen=True)
+class TimelineEntry:
+    """One analysis run or one human decision within a session."""
+
+    kind: EntryKind
+    analysis_id: str
+    timestamp: str
+    input_sha256: str | None
+    decision_state: str | None
+    detail: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "kind": self.kind.value,
+            "analysis_id": self.analysis_id,
+            "timestamp": self.timestamp,
+            "input_sha256": self.input_sha256,
+            "decision_state": self.decision_state,
+            **self.detail,
+        }
+
+
+def summarize_sessions(records: list[dict[str, Any]]) -> list[SessionSummary]:
+    """One summary per session, in order of first appearance."""
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        grouped.setdefault(str(record.get("session_id")), []).append(record)
+    out = []
+    for session_id, recs in grouped.items():
+        decisions = [r for r in recs if r.get("event_type") == EventType.DECISION_MADE]
+        humans = [r for r in recs if r.get("event_type") == EventType.HUMAN_DECISION_RECORDED]
+        out.append(SessionSummary(
+            session_id=session_id,
+            analyses=len(decisions),
+            human_decisions=len(humans),
+            last_timestamp=str(recs[-1].get("timestamp")),
+            last_decision=(decisions[-1].get("result") or {}).get("decision_state") if decisions else None,
+            last_human_decision=(humans[-1].get("result") or {}).get("decision_state") if humans else None,
+        ))
+    return out
+
+
+def session_records(records: list[dict[str, Any]], session_id: str, analysis_id: str | None = None) -> list[dict[str, Any]]:
+    return [
+        r for r in records
+        if r.get("session_id") == session_id and (analysis_id is None or r.get("analysis_id") == analysis_id)
+    ]
+
+
+def session_timeline(records: list[dict[str, Any]], session_id: str) -> list[TimelineEntry]:
+    by_run: dict[str, list[dict[str, Any]]] = {}
+    for record in session_records(records, session_id):
+        by_run.setdefault(str(record.get("analysis_id")), []).append(record)
+    return [_timeline_entry(run_id, recs) for run_id, recs in by_run.items()]
+
+
+def _timeline_entry(analysis_id: str, recs: list[dict[str, Any]]) -> TimelineEntry:
+    by_type = {r.get("event_type"): r for r in recs}
+    human = by_type.get(EventType.HUMAN_DECISION_RECORDED)
+    if human is not None:
+        inputs, evidence = human.get("inputs") or {}, human.get("evidence") or {}
+        return TimelineEntry(
+            kind=EntryKind.HUMAN_DECISION,
+            analysis_id=analysis_id,
+            timestamp=str(human.get("timestamp")),
+            input_sha256=inputs.get("input_sha256"),
+            decision_state=(human.get("result") or {}).get("decision_state"),
+            detail={"from_state": inputs.get("from_state"), "reviewer": evidence.get("reviewer"),
+                    "comment": evidence.get("comment")},
+        )
+    started = by_type.get(EventType.ANALYSIS_STARTED) or {}
+    decision = by_type.get(EventType.DECISION_MADE) or {}
+    started_ev, decision_ev = started.get("evidence") or {}, decision.get("evidence") or {}
+    triggered = [
+        r.get("policy_id") for r in recs
+        if r.get("event_type") == EventType.POLICY_EVALUATED and (r.get("result") or {}).get("outcome") == "TRIGGERED"
+    ]
+    missing = by_type.get(EventType.MISSING_INFO_DETECTED) or {}
+    return TimelineEntry(
+        kind=EntryKind.ANALYSIS,
+        analysis_id=analysis_id,
+        timestamp=str(recs[0].get("timestamp")),
+        input_sha256=started_ev.get("input_sha256"),
+        decision_state=(decision.get("result") or {}).get("decision_state"),
+        detail={
+            "as_of": started_ev.get("as_of"),
+            "action": (decision.get("result") or {}).get("action"),
+            "deciding_policies": decision_ev.get("deciding_policies", []),
+            "triggered_policies": triggered,
+            "critical_missing": (missing.get("evidence") or {}).get("critical", []),
+            "reason": decision_ev.get("reason"),
+        },
+    )
+
+
+def event_summary(record: dict[str, Any]) -> str:
+    """Short one-line description of an audit record's result."""
+    result = record.get("result") or {}
+    evidence = record.get("evidence") or {}
+    match record.get("event_type"):
+        case EventType.ANALYSIS_STARTED:
+            return f"as_of {evidence.get('as_of')} ({evidence.get('as_of_source')}), input {str(evidence.get('input_sha256'))[:12]}"
+        case EventType.COMPENSATION_CALCULATED:
+            return f"recurring TC floor {result.get('recurring_tc_floor')} {result.get('currency')}"
+        case EventType.BAND_ANALYZED:
+            return f"band {result.get('category')}, compa {result.get('compa_ratio')}"
+        case EventType.MISSING_INFO_DETECTED:
+            return f"critical missing: {', '.join(evidence.get('critical', [])) or 'none'}"
+        case EventType.LEVERAGE_ASSESSED:
+            return f"leverage {result.get('level')} ({result.get('points')} points)"
+        case EventType.POLICY_EVALUATED:
+            effect = " -> ".join(x for x in (result.get("state"), result.get("action")) if x)
+            return f"{result.get('outcome')}{f' {effect}' if effect else ''}: {evidence.get('reason')}"
+        case EventType.DECISION_MADE:
+            return f"{result.get('decision_state')} / {result.get('action')}"
+        case EventType.HUMAN_DECISION_RECORDED:
+            inputs = record.get("inputs") or {}
+            return f"{inputs.get('from_state')} -> {result.get('decision_state')} by {evidence.get('reviewer')}"
+        case other:
+            return f"unrecognized event {other!r}"
+
+
 @dataclass(frozen=True)
 class VerifyResult:
     ok: bool

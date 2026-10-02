@@ -18,14 +18,18 @@ from rich.console import Console
 from . import audit
 from .compare import compare, parse_fx
 from .decision import Analysis, analyze, apply_human_decision
-from .models import FailureClass, OfferInput, SalaryOpsError, load_offer, load_settings
+from .models import Failure, FailureClass, OfferInput, SalaryOpsError, load_offer, load_settings
 from .policies import DecisionState
 from .report import (
     render_analysis,
+    render_chain_status,
     render_comparison,
     render_decision,
+    render_events,
     render_missing_detail,
     render_policy_table,
+    render_sessions,
+    render_timeline,
 )
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, help="Negotiation control plane for job offers.")
@@ -198,6 +202,47 @@ def audit_verify_cmd(audit_log: AuditPath = audit.DEFAULT_PATH) -> None:
     where = f" at line {result.line}" if result.line else ""
     err_console.print(f"[bold red]FAILED[/bold red]{where}: {result.error}")
     raise typer.Exit(code=1)
+
+
+@audit_app.command("show")
+def audit_show_cmd(
+    session: Annotated[str | None, typer.Argument(help="Session to show; omit to list all sessions.")] = None,
+    analysis: Annotated[str | None, typer.Option("--analysis", help="Show every event of one analysis in the session.")] = None,
+    audit_log: AuditPath = audit.DEFAULT_PATH,
+    as_json: JsonOut = False,
+) -> None:
+    """List sessions, show one session's timeline, or show one analysis's events."""
+    if session is None and analysis is not None:
+        raise typer.BadParameter("--analysis needs a SESSION argument")
+    try:
+        records = audit.read_records(audit_log)
+        selected = [] if session is None else audit.session_records(records, session, analysis)
+        if session is not None and not selected:
+            target = f"analysis {analysis} in session {session}" if analysis else f"session {session}"
+            raise SalaryOpsError(Failure(FailureClass.INPUT_INVALID, f"no {target} in {audit_log}"))
+    except SalaryOpsError as exc:
+        raise _fail(exc, as_json) from exc
+
+    if session is None:
+        sessions = audit.summarize_sessions(records)
+        if as_json:
+            _emit_json({"sessions": [s.to_dict() for s in sessions]})
+            return
+        render_sessions(console, sessions)
+    elif analysis is not None:
+        if as_json:
+            _emit_json({"records": selected})
+            return
+        render_events(console, selected)
+    else:
+        timeline = audit.session_timeline(records, session)
+        if as_json:
+            _emit_json({"session_id": session, "timeline": [e.to_dict() for e in timeline]})
+            return
+        render_timeline(console, session, timeline)
+    if records:
+        console.print()
+        render_chain_status(console, audit.verify(audit_log))
 
 
 @app.callback()

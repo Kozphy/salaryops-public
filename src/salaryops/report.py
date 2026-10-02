@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
 
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from .audit import EntryKind, SessionSummary, TimelineEntry, VerifyResult, event_summary
 from .compare import Comparison
 from .compensation import CompResult
 from .decision import Analysis
@@ -238,3 +240,65 @@ def render_comparison(console: Console, cmp: Comparison) -> None:
     converted = [c for c in cmp.columns if c.source_currency != cur]
     for c in converted:
         console.print(f"  {c.label}: converted from {c.source_currency} at {c.rate} {cur} per 1 {c.source_currency} (user-supplied)")
+
+
+def render_chain_status(console: Console, result: VerifyResult) -> None:
+    if result.ok:
+        console.print(Text(f"hash chain intact ({result.records} records)", style="dim"))
+    else:
+        where = f" at line {result.line}" if result.line else ""
+        console.print(Text(f"WARNING: hash chain verification failed{where}: {result.error}", style="bold red"))
+
+
+def _state_text(state: str | None) -> Text:
+    if state is None:
+        return Text("-", style="dim")
+    try:
+        return Text(state, style=STATE_STYLES[DecisionState(state)])
+    except ValueError:
+        return Text(state)
+
+
+def render_sessions(console: Console, sessions: list[SessionSummary]) -> None:
+    if not sessions:
+        console.print("no sessions in the audit log")
+        return
+    console.print(Text("AUDIT SESSIONS", style="bold"))
+    for s in sessions:
+        runs = f"{s.analyses} analys{'is' if s.analyses == 1 else 'es'}"
+        reviews = f"{s.human_decisions} human decision{'' if s.human_decisions == 1 else 's'}"
+        heading(console, s.session_id)
+        row(console, "Activity", f"{runs}, {reviews}; last {s.last_timestamp[:16].replace('T', ' ')} UTC")
+        row(console, "Last state", _state_text(s.last_decision))
+        if s.last_human_decision:
+            row(console, "Human", _state_text(s.last_human_decision))
+
+
+def render_timeline(console: Console, session_id: str, entries: list[TimelineEntry]) -> None:
+    console.print(Text(f"SESSION {session_id}", style="bold"))
+    for e in entries:
+        sha = (e.input_sha256 or "?")[:12]
+        heading(console, f"{e.timestamp}  {e.kind.value}  {e.analysis_id}")
+        row(console, "Input", sha)
+        if e.kind is EntryKind.HUMAN_DECISION:
+            row(console, "Decision", Text.assemble(f"{e.detail['from_state']} -> ", _state_text(e.decision_state)))
+            row(console, "Reviewer", str(e.detail["reviewer"]))
+            if e.detail.get("comment"):
+                row(console, "Comment", str(e.detail["comment"]))
+            continue
+        row(console, "As of", str(e.detail["as_of"]))
+        row(console, "State", Text.assemble(_state_text(e.decision_state), f"  ({e.detail['action']})"))
+        row(console, "Fired", ", ".join(e.detail["triggered_policies"]) or "none")
+        row(console, "Missing", ", ".join(e.detail["critical_missing"]) or "none")
+        row(console, "Why", str(e.detail["reason"]))
+
+
+def render_events(console: Console, records: list[dict[str, Any]]) -> None:
+    table = Table(title=f"AUDIT EVENTS - analysis {records[0].get('analysis_id')}", expand=False)
+    table.add_column("Seq", justify="right", no_wrap=True)
+    table.add_column("Event", no_wrap=True)
+    table.add_column("Policy", no_wrap=True)
+    table.add_column("Summary", overflow="fold")
+    for r in records:
+        table.add_row(str(r.get("sequence")), str(r.get("event_type")), r.get("policy_id") or "", event_summary(r))
+    console.print(table)
