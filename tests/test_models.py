@@ -2,16 +2,27 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+import yaml
 
 from conftest import BASE_OFFER, DELETE, make_input, merge
 from salaryops.models import (
     Amount,
     AmountStatus,
+    Batna,
+    Compensation,
+    Constraints,
     FailureClass,
+    Location,
+    OfferInput,
     PolicySettings,
+    RecruiterContext,
+    RoleRequirements,
+    SalaryBand,
     SalaryOpsError,
     load_offer,
     load_settings,
+    offer_json_schema,
+    offer_template,
     parse_offer,
 )
 
@@ -141,3 +152,39 @@ def test_settings_overlay_rejects_unknown_keys(tmp_path: Path):
 
 def test_default_settings_without_file():
     assert load_settings(None) == PolicySettings()
+
+
+def _uncomment_block(text: str, key: str) -> dict:
+    lines = text.splitlines()
+    start = lines.index(f"# {key}:")
+    block = [lines[start][2:]]
+    for line in lines[start + 1:]:
+        if not line.startswith("#   "):
+            break
+        block.append(line[2:])
+    return yaml.safe_load("\n".join(block))[key]
+
+
+def test_offer_template_lists_every_field_and_parses():
+    text = offer_template()
+    data = yaml.safe_load(text)
+    assert set(data) == set(OfferInput.model_fields)
+    nested = {"location": Location, "compensation": Compensation, "requirements": RoleRequirements,
+              "recruiter": RecruiterContext, "constraints": Constraints}
+    for key, model in nested.items():
+        assert set(data[key]) == set(model.model_fields), key
+    examples = {"salary_band": SalaryBand, "batna": Batna}
+    for key, model in examples.items():
+        block = _uncomment_block(text, key)
+        assert set(block) == set(model.model_fields), key
+        data[key] = block
+    assert parse_offer(data).salary_band is not None
+
+
+def test_offer_schema_describes_input_form():
+    schema = offer_json_schema()
+    assert set(schema["required"]) == {"role", "compensation"}
+    assert schema["additionalProperties"] is False
+    amount = schema["$defs"]["Amount"]
+    assert {"type": "null"} in amount["anyOf"]
+    assert schema["$defs"]["Compensation"]["properties"]["bonus"] == {"$ref": "#/$defs/Amount"}

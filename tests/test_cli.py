@@ -148,6 +148,26 @@ def test_audit_show_errors(log):
     assert "verification failed" in invoke("audit", "show", "offer_counter", "--audit-log", log).output
 
 
+def test_init_creates_template_that_analyzes(tmp_path):
+    path = tmp_path / "offers" / "new.yaml"
+    r = invoke("init", path)
+    assert r.exit_code == 0 and path.exists()
+    data = json.loads(invoke("analyze", path, "--json", "--no-audit").output)
+    assert data["decision_state"] == "NEED_MORE_INFORMATION"
+    again = invoke("init", path)
+    assert again.exit_code == 2 and "already exists" in again.output
+    assert invoke("init", path, "--force").exit_code == 0
+
+
+def test_schema_command(tmp_path):
+    r = invoke("schema")
+    assert r.exit_code == 0
+    assert json.loads(r.output)["title"] == "SalaryOps offer"
+    out = tmp_path / "offer.schema.json"
+    assert invoke("schema", "-o", out).exit_code == 0
+    assert json.loads(out.read_text(encoding="utf-8"))["$defs"]["Amount"]
+
+
 def test_corrupt_audit_log_fails_cleanly(log):
     Path(log).write_text("not json\n", encoding="utf-8")
     r = invoke("analyze", EXAMPLES / "offer_counter.yaml", "--json", "--audit-log", log)

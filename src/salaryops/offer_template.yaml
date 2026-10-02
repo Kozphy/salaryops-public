@@ -1,0 +1,71 @@
+# SalaryOps offer file. Fill in what you know and leave the rest as `unknown` or null.
+# Unknown is never treated as zero: an unknown bonus makes total comp a floor, not a value.
+# Then run: salaryops analyze <this file>
+#
+# Editor completion: run `salaryops schema -o offer.schema.json`, then add this first line:
+#   # yaml-language-server: $schema=offer.schema.json
+
+session: null                 # groups audit events; defaults to the file name
+as_of: null                   # analysis date YYYY-MM-DD; defaults to today
+
+company: null
+role: Job title               # required
+level: null
+employment_type: null         # full_time | part_time | contract | freelance
+
+location:
+  country: null
+  city: null
+  remote: null                # true | false | null (unknown)
+  remote_eligible_countries: null   # remote roles: e.g. [Taiwan, Japan]
+
+compensation:
+  currency: TWD               # required, ISO 4217 code
+  base: 1000000               # required, annual base salary
+  bonus: unknown              # annual target bonus; 0 if there is none
+  annualized_equity: unknown  # equity value per year, OR equity_grant + vesting_years below
+  equity_grant: unknown       # total grant value
+  vesting_years: null
+  vesting_cliff_months: null  # e.g. 12; over 12 means no equity vests in year 1
+  equity_kind: null           # public | private
+  equity_discount: null       # private equity: fraction off paper value, e.g. 0.5 (0 accepts paper value)
+  equity_refresh_annual: unknown    # expected refresher grants per year; shown, never added to TC
+  sign_on: unknown
+  benefits_value: unknown     # shown, never added to TC
+
+requirements:
+  on_call: null
+  travel_percent: null
+  sponsorship_offered: null
+
+employer_final_offer: false
+
+salary_band: null
+# salary_band:
+#   low: 1400000
+#   midpoint: 1650000         # optional; (low + high) / 2 when omitted
+#   high: 1900000
+#   currency: TWD             # optional; must match compensation.currency
+#   source: recruiter         # recruiter | published | market_survey | self_estimate
+#   confidence: high          # low | medium | high
+
+recruiter:
+  type: unknown               # in_house | agency | unknown
+  offer_deadline: null        # YYYY-MM-DD
+
+batna: null
+# batna:
+#   competing_offers: 0
+#   late_stage_interviews: 0
+#   currently_employed: true
+#   freelance_income: false
+
+constraints:
+  candidate_country: null
+  minimum_base: null
+  minimum_total_comp: null
+  remote_required: false
+  acceptable_locations: []
+  max_travel_percent: null
+  on_call_allowed: null
+  needs_sponsorship: false

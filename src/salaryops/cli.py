@@ -18,7 +18,16 @@ from rich.console import Console
 from . import audit
 from .compare import compare, parse_fx
 from .decision import Analysis, analyze, apply_human_decision
-from .models import Failure, FailureClass, OfferInput, SalaryOpsError, load_offer, load_settings
+from .models import (
+    Failure,
+    FailureClass,
+    OfferInput,
+    SalaryOpsError,
+    load_offer,
+    load_settings,
+    offer_json_schema,
+    offer_template,
+)
 from .policies import DecisionState
 from .report import (
     render_analysis,
@@ -190,6 +199,32 @@ def review_cmd(
         return
     render_decision(console, r.analysis, new_state)
     console.print(f"\n  recorded {current.value} -> {new_state.value} by {reviewer} (audit sequence {record['sequence']})")
+
+
+@app.command("init")
+def init_cmd(
+    path: Annotated[Path, typer.Argument(help="Offer file to create.")] = Path("offer.yaml"),
+    force: Annotated[bool, typer.Option("--force", help="Overwrite an existing file.")] = False,
+) -> None:
+    """Create a commented offer file listing every field."""
+    if path.exists() and not force:
+        raise _fail(SalaryOpsError(Failure(FailureClass.INPUT_INVALID, f"{path} already exists; pass --force to overwrite")), False)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(offer_template(), encoding="utf-8")
+    console.print(f"created {path}; fill it in, then run: salaryops analyze {path}")
+
+
+@app.command("schema")
+def schema_cmd(
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Write to this file instead of stdout.")] = None,
+) -> None:
+    """Print the JSON Schema for offer files (editor validation and autocompletion)."""
+    text = json.dumps(offer_json_schema(), indent=2, ensure_ascii=False) + "\n"
+    if output is None:
+        typer.echo(text, nl=False)
+        return
+    output.write_text(text, encoding="utf-8")
+    console.print(f"wrote {output}")
 
 
 @audit_app.command("verify")

@@ -12,11 +12,22 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    GetJsonSchemaHandler,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import CoreSchema
 
 
 class FailureClass(StrEnum):
@@ -117,6 +128,19 @@ class Amount(_Model):
 
     status: AmountStatus
     value: Decimal | None = None
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> JsonSchemaValue:
+        """Describe the YAML input form, not the internal status/value pair."""
+        return {
+            "title": "Amount",
+            "description": "A non-negative number, 0 for a known zero, or unknown / null / omitted when not stated.",
+            "anyOf": [
+                {"type": "number", "minimum": 0},
+                {"type": "string", "pattern": "^\\s*[Uu][Nn][Kk][Nn][Oo][Ww][Nn]\\s*$"},
+                {"type": "null"},
+            ],
+        }
 
     @model_validator(mode="before")
     @classmethod
@@ -322,6 +346,20 @@ class PolicySettings(_Model):
     def sha256(self) -> str:
         canonical = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def offer_template() -> str:
+    """Commented offer file listing every field, for `salaryops init`."""
+    return resources.files("salaryops").joinpath("offer_template.yaml").read_text(encoding="utf-8")
+
+
+def offer_json_schema() -> dict[str, Any]:
+    """JSON Schema for offer files, for editor validation and autocompletion."""
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        **OfferInput.model_json_schema(mode="validation"),
+        "title": "SalaryOps offer",
+    }
 
 
 def _format_errors(exc: ValidationError) -> tuple[str, str | None]:
