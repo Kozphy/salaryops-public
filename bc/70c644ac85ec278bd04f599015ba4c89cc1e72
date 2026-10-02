@@ -1,0 +1,24 @@
+pyproject.toml
+  s_97d87858774eb5::t_52539643d0e342 36
+  s_97d87858774eb5::t_86e27177c20c03 19,32-35,37-43,45-54
+  s_97d87858774eb5::t_42ab865d460a7b 20
+  s_97d87858774eb5::t_b62ed5d07a2145 44
+.github/workflows/ci.yml
+  s_97d87858774eb5::t_cf70c1b9c8ca86 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc70c644ac85ec278bd04f599015ba4c89cc1e72",
+  "prompts": {},
+  "sessions": {
+    "s_97d87858774eb5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "39b89bbe-7f65-41ad-8ef1-96ea27d28aae",
+        "model": "default"
+      },
+      "human_author": "Zixsa <50504962+Kozphy@users.noreply.github.com>"
+    }
+  }
+}
