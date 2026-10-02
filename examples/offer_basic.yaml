@@ -1,0 +1,39 @@
+# The example from the project spec. Unstated fields stay UNKNOWN on purpose.
+as_of: 2026-10-02
+
+company: Example Corp
+role: Data Analyst
+level: L3
+
+location:
+  country: Taiwan
+  remote: true
+
+compensation:
+  currency: TWD
+  base: 1500000
+  bonus: 150000
+  annualized_equity: 200000
+  sign_on: 100000
+
+salary_band:
+  low: 1400000
+  midpoint: 1650000
+  high: 1900000
+  source: recruiter
+  confidence: high
+
+recruiter:
+  type: in_house
+
+batna:
+  competing_offers: 1
+  late_stage_interviews: 2
+  currently_employed: false
+
+constraints:
+  minimum_base: 1400000
+  minimum_total_comp: 1700000
+  remote_required: false
+  on_call_allowed: false
+  max_travel_percent: 10

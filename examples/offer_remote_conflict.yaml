@@ -1,0 +1,44 @@
+# Taiwan-based candidate, remote role restricted to US residents.
+as_of: 2026-10-02
+
+company: Remote First Inc
+role: Analytics Engineer
+level: Senior
+employment_type: full_time
+
+location:
+  country: United States
+  remote: true
+  remote_eligible_countries: [United States]
+
+compensation:
+  currency: USD
+  base: 120000
+  bonus: 0
+  annualized_equity: 15000
+  sign_on: 0
+
+requirements:
+  on_call: false
+  travel_percent: 0
+
+salary_band:
+  low: 110000
+  high: 140000
+  source: published
+  confidence: medium
+
+recruiter:
+  type: in_house
+  offer_deadline: 2026-10-16
+
+batna:
+  competing_offers: 0
+  late_stage_interviews: 1
+  currently_employed: true
+
+constraints:
+  candidate_country: Taiwan
+  minimum_base: 100000
+  on_call_allowed: false
+  max_travel_percent: 10
