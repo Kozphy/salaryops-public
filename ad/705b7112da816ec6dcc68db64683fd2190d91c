@@ -1,0 +1,41 @@
+src/salaryops/ui.py
+  s_97d87858774eb5::t_b70bacf91f0a03 116,134,136,201
+  s_97d87858774eb5::t_d640e5bde166fc 11
+  s_97d87858774eb5::t_ce942bc952f9c6 210,218-219
+  s_97d87858774eb5::t_5fd5cf488c3d9c 1-10,12-80,82-115,117-133,135,137-200,202-209,211-217,220-236
+  s_97d87858774eb5::t_a4c7117d4e1e30 81
+src/salaryops/models.py
+  s_97d87858774eb5::t_22c012a9b5ebfe 375-381,387
+  s_97d87858774eb5::t_f0dd86162f1bc1 422-425,427-434
+tests/test_cli.py
+  s_97d87858774eb5::t_c0174474040692 172-191
+  s_97d87858774eb5::t_8c4161b61ce512 7
+src/salaryops/cli.py
+  s_97d87858774eb5::t_89487a8cd59525 234-237,239-245
+  s_97d87858774eb5::t_960e3c91bd706d 9,11-12
+  s_97d87858774eb5::t_0e37e8fb42a16f 238
+  s_97d87858774eb5::t_d3cac516611b21 58
+tests/test_ui.py
+  s_97d87858774eb5::t_e9bde4df5a042b 96,104-110
+  s_97d87858774eb5::t_0374f025512cab 8
+  s_97d87858774eb5::t_4f3d04a904ce2a 1-7,9-50,52-95,97-103
+  s_97d87858774eb5::t_b49510d24589a0 51
+pyproject.toml
+  s_97d87858774eb5::t_674ba392e771b4 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ad705b7112da816ec6dcc68db64683fd2190d91c",
+  "prompts": {},
+  "sessions": {
+    "s_97d87858774eb5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "39b89bbe-7f65-41ad-8ef1-96ea27d28aae",
+        "model": "default"
+      },
+      "human_author": "Zixsa <50504962+Kozphy@users.noreply.github.com>"
+    }
+  }
+}
