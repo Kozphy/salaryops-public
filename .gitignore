@@ -1,10 +1,61 @@
-.venv/
+# Python bytecode and packaging
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
 *.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+wheels/
+pip-wheel-metadata/
+.installed.cfg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# Test, coverage, and tool caches
 .pytest_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# Secrets and local configuration
 .env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
 # Local audit trail: contains your compensation data.
 .salaryops/
+
+# Your own offers created by `salaryops init` / `salaryops schema` in the repo root.
+# They contain real compensation data; examples/ stays tracked.
+/offer*.yaml
+/offer*.yml
+/offer.schema.json
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating systems
+.DS_Store
+Thumbs.db
+desktop.ini
