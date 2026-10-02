@@ -1,0 +1,19 @@
+.gitignore
+  s_97d87858774eb5::t_c942a64e130a06 1,4-5,7-22,25-26,28-36,38-41,44-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "75f6506434454e9b02089fccd4a384df4c998562",
+  "prompts": {},
+  "sessions": {
+    "s_97d87858774eb5": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "39b89bbe-7f65-41ad-8ef1-96ea27d28aae",
+        "model": "default"
+      },
+      "human_author": "Zixsa <50504962+Kozphy@users.noreply.github.com>"
+    }
+  }
+}
